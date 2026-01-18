@@ -4,7 +4,6 @@
 /// Students should complete main.move, not this file.
 
 module challenge::day_04_solution {
-    use std::vector;
     use std::string::String;
 
     // Copy the Habit struct from day_03

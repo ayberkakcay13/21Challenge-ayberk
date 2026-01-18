@@ -1,44 +1,40 @@
-/// DAY 4: Vector + Ownership Basics
-/// 
-/// Today you will:
-/// 1. Learn about vectors
-/// 2. Create a list of habits
-/// 3. Understand basic ownership concepts
+module challenge::main {
+    use std::string;
+    use std::string::String;
 
-module challenge::day_04 {
-    use std::vector;
-
-    // Copy the Habit struct from day_03
-    public struct Habit has copy, drop {
-        name: vector<u8>,
-        completed: bool,
+    public struct Habit has drop, store {
+        id: u64,
+        name: String,
+        done: bool,
     }
 
-    public fun new_habit(name: vector<u8>): Habit {
-        Habit {
-            name,
-            completed: false,
-        }
+    public struct HabitList has drop, store {
+        habits: vector<Habit>,
     }
 
-    // TODO: Create a struct called 'HabitList' with:
-    // - habits: vector<Habit>
-    // Add 'drop' ability (not copy, because vectors can't be copied)
-    // public struct HabitList has drop {
-    //     // Your field here
-    // }
+    public fun empty_list(): HabitList {
+        HabitList { habits: vector::empty<Habit>() }
+    }
 
-    // TODO: Write a function 'empty_list' that returns an empty HabitList
-    // public fun empty_list(): HabitList {
-    //     // Use vector::empty() to create an empty vector
-    // }
+    public fun add_habit(list: &mut HabitList, habit: Habit) {
+        vector::push_back(&mut list.habits, habit);
+    }
 
-    // TODO: Write a function 'add_habit' that takes:
-    // - list: &mut HabitList (mutable reference)
-    // - habit: Habit (by value, transfers ownership)
-    // Use vector::push_back to add the habit
-    // public fun add_habit(list: &mut HabitList, habit: Habit) {
-    //     // Your code here
-    // }
+    public fun length(list: &HabitList): u64 {
+        vector::length(&list.habits)
+    }
+
+    #[test]
+    fun test_add_habit() {
+        let mut list = empty_list();
+
+        let h1 = Habit { id: 1, name: string::utf8(b"Gym"), done: false };
+        let h2 = Habit { id: 2, name: string::utf8(b"Read"), done: true };
+
+        add_habit(&mut list, h1);
+        add_habit(&mut list, h2);
+
+        assert!(length(&list) == 2, 0);
+    }
 }
 
