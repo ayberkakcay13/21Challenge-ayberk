@@ -1,49 +1,40 @@
-/// DAY 5: Control Flow & Mark Habit as Done
-/// 
-/// Today you will:
-/// 1. Learn if/else statements
-/// 2. Learn how to access vector elements
-/// 3. Write a function to mark a habit as completed
+module challenge::main {
+    use std::string;
+    use std::string::String;
 
-module challenge::day_05 {
-    use std::vector;
-
-    // Copy from day_04
-    public struct Habit has copy, drop {
-        name: vector<u8>,
-        completed: bool,
+    public struct Habit has drop, store {
+        id: u64,
+        name: String,
+        done: bool,
     }
 
-    public struct HabitList has drop {
+    public struct HabitList has drop, store {
         habits: vector<Habit>,
     }
 
-    public fun new_habit(name: vector<u8>): Habit {
-        Habit {
-            name,
-            completed: false,
-        }
-    }
-
     public fun empty_list(): HabitList {
-        HabitList {
-            habits: vector::empty(),
-        }
+        HabitList { habits: vector::empty<Habit>() }
     }
 
     public fun add_habit(list: &mut HabitList, habit: Habit) {
         vector::push_back(&mut list.habits, habit);
     }
 
-    // TODO: Write a function 'complete_habit' that:
-    // - Takes list: &mut HabitList and index: u64
-    // - Checks if index is valid (less than vector length)
-    // - If valid, marks that habit's completed field as true
-    // Use vector::length() to get the length
-    // Use vector::borrow_mut() to get a mutable reference to an element
-    // public fun complete_habit(list: &mut HabitList, index: u64) {
-    //     // Your code here
-    //     // Hint: if (index < length) { ... }
-    // }
+    public fun length(list: &HabitList): u64 {
+        vector::length(&list.habits)
+    }
+
+    #[test]
+    fun test_add_habit() {
+        let mut list = empty_list();
+
+        let h1 = Habit { id: 1, name: string::utf8(b"Gym"), done: false };
+        let h2 = Habit { id: 2, name: string::utf8(b"Read"), done: true };
+
+        add_habit(&mut list, h1);
+        add_habit(&mut list, h2);
+
+        assert!(length(&list) == 2, 0);
+    }
 }
 
