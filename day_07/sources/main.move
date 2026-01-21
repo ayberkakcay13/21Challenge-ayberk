@@ -1,24 +1,34 @@
-/// DAY 7: Unit Tests for Habit Tracker
-///
-/// Today you will:
-/// 1. Learn how to write tests in Move
-/// 2. Write tests for your habit tracker
-/// 3. Use assert! macro
-///
-/// Note: You can copy code from day_06/sources/solution.move if needed
-
-module challenge::day_07 {
-    use std::vector;
+module challenge::main {
     use std::string::{Self, String};
+    use sui::object::UID;
+    use sui::tx_context::TxContext;
+    use sui::transfer;
 
-    // Copy from day_06: Habit struct with String
-    public struct Habit has copy, drop {
+    /// --------------------
+    /// Core structs
+    /// --------------------
+
+    /// Bir habit
+    public struct Habit has store, drop {
         name: String,
         completed: bool,
     }
 
-    public struct HabitList has drop {
+    /// Habit listesi tutan on-chain object
+    public struct HabitBook has key, store {
+        id: UID,
         habits: vector<Habit>,
+    }
+
+    /// --------------------
+    /// Core logic
+    /// --------------------
+
+    public fun new_book(ctx: &mut TxContext): HabitBook {
+        HabitBook {
+            id: sui::object::new(ctx),
+            habits: vector[],
+        }
     }
 
     public fun new_habit(name: String): Habit {
@@ -28,48 +38,100 @@ module challenge::day_07 {
         }
     }
 
+    /// Day 6’dan: bytes -> String helper
     public fun make_habit(name_bytes: vector<u8>): Habit {
-        let name = string::utf8(name_bytes);
-        new_habit(name)
+        let s = string::utf8(name_bytes);
+        new_habit(s)
     }
 
-    public fun empty_list(): HabitList {
-        HabitList {
-            habits: vector::empty(),
-        }
+    public fun add_habit(book: &mut HabitBook, habit: Habit) {
+        vector::push_back(&mut book.habits, habit);
     }
 
-    public fun add_habit(list: &mut HabitList, habit: Habit) {
-        vector::push_back(&mut list.habits, habit);
+    public fun add_habit_bytes(book: &mut HabitBook, name_bytes: vector<u8>) {
+        let h = make_habit(name_bytes);
+        add_habit(book, h);
     }
 
-    public fun complete_habit(list: &mut HabitList, index: u64) {
-        let len = vector::length(&list.habits);
-        if (index < len) {
-            let habit = vector::borrow_mut(&mut list.habits, index);
-            habit.completed = true;
-        }
+    /// Bir habit’i tamamla
+    public fun complete_habit(book: &mut HabitBook, index: u64) {
+        let h = vector::borrow_mut(&mut book.habits, index);
+        h.completed = true;
     }
 
-    // Note: assert! is a built-in macro in Move 2024 - no import needed!
+    public fun habit_count(book: &HabitBook): u64 {
+        vector::length(&book.habits)
+    }
 
-    // TODO: Write a test 'test_add_habits' that:
-    // - Creates an empty list
-    // - Adds 1-2 habits
-    // - Checks that the list length is correct
-    // #[test]
-    // fun test_add_habits() {
-    //     // Your code here
-    //     // Use b"Exercise".to_string() to create a String
-    // }
+    public fun habit_completed(book: &HabitBook, index: u64): bool {
+        let h = vector::borrow(&book.habits, index);
+        h.completed
+    }
 
-    // TODO: Write a test 'test_complete_habit' that:
-    // - Creates a list and adds a habit
-    // - Completes the habit
-    // - Checks that completed == true
-    // #[test]
-    // fun test_complete_habit() {
-    //     // Your code here
-    // }
+    public fun habit_name(book: &HabitBook, index: u64): &String {
+        let h = vector::borrow(&book.habits, index);
+        &h.name
+    }
+
+    /// Entry (prod için)
+    public entry fun create_book(ctx: &mut TxContext) {
+        let book = new_book(ctx);
+        transfer::public_transfer(book, sui::tx_context::sender(ctx));
+    }
+
+    /// --------------------
+    /// Tests (Day 7)
+    /// --------------------
+
+    #[test_only]
+    const ALICE: address = @0xA;
+
+    /// Test 1: Habit ekleme
+    #[test]
+    fun test_add_habits() {
+        use sui::test_scenario as ts;
+
+        let mut scenario = ts::begin(@0x0);
+        scenario.next_tx(ALICE);
+
+        let mut book = new_book(scenario.ctx());
+
+        add_habit_bytes(&mut book, b"run");
+        add_habit_bytes(&mut book, b"read");
+
+        // habit sayısı doğru mu?
+        assert!(habit_count(&book) == 2, 0);
+
+        // isimler doğru mu?
+        assert!(*string::as_bytes(habit_name(&book, 0)) == b"run", 1);
+        assert!(*string::as_bytes(habit_name(&book, 1)) == b"read", 2);
+
+        transfer::public_transfer(book, ALICE);
+        ts::end(scenario);
+    }
+
+    /// Test 2: Habit tamamlama
+    #[test]
+    fun test_complete_habit() {
+        use sui::test_scenario as ts;
+
+        let mut scenario = ts::begin(@0x0);
+        scenario.next_tx(ALICE);
+
+        let mut book = new_book(scenario.ctx());
+
+        add_habit_bytes(&mut book, b"gym");
+
+        // başta tamamlanmamış olmalı
+        assert!(!habit_completed(&book, 0), 10);
+
+        // tamamla
+        complete_habit(&mut book, 0);
+
+        // artık tamamlanmış olmalı
+        assert!(habit_completed(&book, 0), 11);
+
+        transfer::public_transfer(book, ALICE);
+        ts::end(scenario);
+    }
 }
-
